@@ -114,6 +114,9 @@ def update_task(task_id: int, task: UpdateTask):
     cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
     row = cursor.fetchone()
 
+    if row is None:
+        raise HTTPException(status_code=404, detail={ "error": "Task not found"})
+
     updated_title = task.title if task.title is not None else row["title"]
     updated_done = task.done if task.done is not None else bool(row["done"])
 
@@ -130,6 +133,10 @@ def delete_task(task_id: int):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
     row = cursor.fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail={ "error": "Task not found"})
+
     cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
     conn.commit()
     cursor.close()

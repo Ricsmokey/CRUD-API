@@ -59,19 +59,32 @@ class UpdateTask(BaseModel):
     done: Optional[bool] = None
     
 
-# CRUD models
 # Get tasks
 @app.get("/tasks")
-def get_tasks():
-    return list(db.values())
+async def get_tasks():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks")
+    rows = cursor.fetchall()
+    tasks = [{"id": row["id"], "title": row["title"], "done": bool(row["done"])} for row in rows]
+    cursor.close()
+    conn.close()
+    return tasks
 
 # Get task by ID
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
-    task = db.get(task_id)
-    if task is None:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if row is None:
         raise HTTPException(status_code=404, detail={"error": f"Task {task_id} not found"})
-    return task
+    
+    return {"id": row["id"], "title": row["title"], "done": bool(row["done"])}
 
 
 

@@ -82,7 +82,7 @@ def get_task(task_id: int):
     conn.close()
     
     if row is None:
-        raise HTTPException(status_code=404, detail={"error": f"Task {task_id} not found"})
+        raise HTTPException(status_code=404, detail={ "error": "Task not found"})
     
     return {"id": row["id"], "title": row["title"], "done": bool(row["done"])}
 
@@ -91,18 +91,26 @@ def get_task(task_id: int):
 # Create a new task
 @app.post("/tasks", status_code=201)
 def create_task(task: CreateTask):
-    if not task.title.strip():
-        raise HTTPException(status_code=400, detail={"error": "Bad request"})
-    new_id = max(db.keys()) + 1 if db else 1
-    db[new_id] = {"id": new_id, "title": task.title, "done": False}
-    return db[new_id]
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (task.title, False))
+    conn.commit()
+    task_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+
+    if task_id is None:
+        raise HTTPException(status_code=400, detail={ "error": "Missing Title"})
+    return {"id": task_id, "title": task.title, "done": False}
+
+
 
 
 # Update and Delete
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, task: UpdateTask):
     if task_id not in db:
-        raise HTTPException(status_code=404, detail={"error": f"Task {task_id} not found"})
+        raise HTTPException(status_code=404, detail={"error": f"Task {task_id} not found"}) 
     
     if task.title is not None:
         db[task_id]["title"] = task.title

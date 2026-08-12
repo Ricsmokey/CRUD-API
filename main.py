@@ -1,6 +1,41 @@
+from itertools import count
+from tkinter import INSERT
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+import sqlite3
+import seed
+
+# Create SQLite database
+db = "tasks.db"
+def get_db_connection():
+    conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+conn = sqlite3.connect("tasks.db")
+cursor = conn.cursor()
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        done BOOLEAN NOT NULL DEFAULT 0
+)
+""")
+
+cursor.execute("SELECT COUNT(*) FROM tasks")
+count = cursor.fetchone()[0]
+if count == 0:
+    tasks = [("Buy a car", False), ("Clean the house", True), ("Finish the assignment", False)]
+    cursor.executemany("INSERT OR IGNORE INTO tasks (title, done) VALUES (?, ?)", tasks)
+    print("Table 'tasks' seeded with initial data.")
+    conn.commit()
+else:
+    print("Table 'tasks' already has data. Skipping seeding.")
+    cursor.close()
+    conn.close()
+
 
 app = FastAPI(title ="Todo List API")
 @app.get("/")
@@ -23,12 +58,6 @@ class UpdateTask(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
     
-
-db = {
-    1: {"id": 1, "title": "Task 1", "done": False},
-    2: {"id": 2, "title": "Task 2", "done": True},
-    3: {"id": 3, "title": "Task 3", "done": False}
-}
 
 # CRUD models
 # Get tasks

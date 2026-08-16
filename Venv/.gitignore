@@ -2,3 +2,5 @@
 Venv/
 __pycache__/
 tasks.db
+.env
+
